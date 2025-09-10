@@ -1,0 +1,55 @@
+name: Ubisoft CI/CD
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Run unit tests
+        run: npm test
+        continue-on-error: false
+
+      - name: Run functional tests
+        run: npm run test:functional
+        continue-on-error: true
+
+      - name: Generate documentation
+        run: npx jsdoc -c jsdoc.json
+        continue-on-error: true
+
+      - name: Archive test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: reports/
+
+      - name: Build Docker image
+        run: docker build -t ubisoft-game .
+
+      - name: Save Docker image
+        uses: actions/upload-artifact@v4
+        with:
+          name: game-docker-image
+          path: |
+            ./docker-compose.yml
